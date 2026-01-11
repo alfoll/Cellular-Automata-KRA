@@ -1,10 +1,8 @@
 package org.example.kra_rosl_9
 
-import CellularAutomataUI
+import org.example.kra_rosl_9.UI.CellularAutomataUI
 import javax.swing.SwingUtilities
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 fun main() {
     SwingUtilities.invokeLater {
         CellularAutomataUI()

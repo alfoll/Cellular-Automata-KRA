@@ -1,17 +1,17 @@
 package org.example.kra_rosl_9.rules.impl
 
-import org.example.kra_rosl_9.neighborhood.NeighborhoodContext
+import org.example.kra_rosl_9.logic.ReadableGrid
 import org.example.kra_rosl_9.rules.AutomationRule
 
 class AverageRule : AutomationRule<Double> {
     override val name = "Average"
 
-    override fun calculateNewState(context: NeighborhoodContext<Double>): Double {
+    override fun calculateNewState(grid: ReadableGrid<Double>, x: Int, y: Int): Double {
         // окрестность - крест
-        val up = context.getNeighbor(0, 1)
-        val down = context.getNeighbor(0, -1)
-        val left = context.getNeighbor(-1, 0)
-        val right = context.getNeighbor(1, 0)
+        val up = grid.getValue(x, y + 1)
+        val down = grid.getValue(x, y - 1)
+        val left = grid.getValue(x - 1, y)
+        val right = grid.getValue(x + 1, y)
 
         return (up + down + left + right) / 4.0
     }

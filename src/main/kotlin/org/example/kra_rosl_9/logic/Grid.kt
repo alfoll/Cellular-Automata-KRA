@@ -1,9 +1,13 @@
 package org.example.kra_rosl_9.logic
 
 class Grid<T> (
-    val size: Int,
+    override val size: Int,
     private val initialValues: (Int, Int) -> T,
-) {
+) : ReadableGrid<T> {
+    init {
+        require(size > 0) { "Размер сетки должен быть положительным (передано: $size)" }
+    }
+
     // один массив для матрицы
     private val cells: Array<Any?> = Array(size * size) { i ->
         initialValues(i / size, i % size)
@@ -17,7 +21,7 @@ class Grid<T> (
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun getValue(x: Int, y: Int): T =
+    override fun getValue(x: Int, y: Int): T =
         cells[getIndex(x, y)] as T
 
     fun setValue(x: Int, y: Int, value: T) {
@@ -25,6 +29,7 @@ class Grid<T> (
     }
 
     fun copyFrom(other: Grid<T>) {
+        require(other.size == this.size) { "Размеры сеток не совпадают для копирования" }
         System.arraycopy(other.cells, 0, this.cells, 0, cells.size)
     }
 }

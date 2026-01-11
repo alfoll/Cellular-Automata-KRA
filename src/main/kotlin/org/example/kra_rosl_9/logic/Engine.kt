@@ -1,16 +1,19 @@
 package org.example.kra_rosl_9.logic
 
 import kotlinx.coroutines.*
-import org.example.kra_rosl_9.neighborhood.NeighborhoodContext
 import org.example.kra_rosl_9.rules.AutomationRule
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 
 class Engine<T> (
-    val size: Int,
+    private val size: Int,
     initialGrid: Grid<T>,
 ) {
-    private var currentGrid = initialGrid
+    init {
+        require(initialGrid.size == size) { "Размер начальной сетки не совпадает с размером Engine" }
+    }
+
+    var currentGrid = initialGrid
     private var generationCounter = 0
     val nextGrid = Grid(size) { _, _ -> initialGrid.getValue(0, 0) }
 
@@ -18,8 +21,8 @@ class Engine<T> (
     suspend fun step(
         rule: AutomationRule<T>,
         aliveValue: T,
+        onAudit: (String) -> Unit,
         ): Grid<T> = coroutineScope {
-            // Временная инициализация
 
         val aliveCount = AtomicInteger(0)
 
@@ -36,16 +39,21 @@ class Engine<T> (
                     for (x in startX until endX) {
                         for (y in 0 until size) {
 
-                            val context = object : NeighborhoodContext<T> {
-                                override val centralState: T = currentGrid.getValue(x, y)
-                                override fun getNeighbor(dx: Int, dy: Int): T =
-                                    currentGrid.getValue(x + dx, y + dy)
+//                      осталось от реализации с контекстом
+//                            val context = object : NeighborhoodContext<T> {
+//                                override val centralState: T = currentGrid.getValue(x, y)
+//                                override fun getNeighbor(dx: Int, dy: Int): T =
+//                                    currentGrid.getValue(x + dx, y + dy)
+//                            }
+
+                            try {
+                                val newState = rule.calculateNewState(currentGrid, x, y)
+                                nextGrid.setValue(x, y, newState)
+
+                                if (newState == aliveValue) aliveCount.incrementAndGet()
+                            } catch (e: Exception) {
+                                throw IllegalStateException("Ошибка при расчете правила ${rule.name} в клетке $x:$y", e)
                             }
-
-                            val newState = rule.calculateNewState(context)
-
-                            nextGrid.setValue(x, y, newState)
-                            if (newState == aliveValue) aliveCount.incrementAndGet()
                         }
                     }
                 }
@@ -56,11 +64,15 @@ class Engine<T> (
         currentGrid.copyFrom(nextGrid)
         generationCounter++
 
-        println("\nАУДИТ ПОКОЛЕНИЯ $generationCounter: " +
-                "\nПравило [${rule.name}] выполнено за $time мс, " +
-                "\nСтатистика: живых клеток = ${aliveCount.get()}, мертвых = ${size * size - aliveCount.get()}" +
-                "\nИспользовано $numCores ядер, " +
-                "\nРазмер области: ${size}x${size}\n")
+        if (generationCounter % 10 == 0 || generationCounter == 1) {
+            val report = "\nАУДИТ ПОКОЛЕНИЯ $generationCounter: " +
+                    "\nПравило [${rule.name}] выполнено за $time мс, " +
+                    "\nСтатистика: живых клеток = ${aliveCount.get()}, мертвых = ${size * size - aliveCount.get()}" +
+                    "\nИспользовано $numCores ядер, " +
+                    "\nРазмер области: ${size}x${size}\n"
+
+            onAudit(report)
+        }
 
         return@coroutineScope nextGrid
     }
