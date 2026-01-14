@@ -1,11 +1,11 @@
 package org.example.kra_rosl_9.logic
 
 import kotlinx.coroutines.*
-import org.example.kra_rosl_9.rules.AutomationRule
+import org.example.kra_rosl_9.cell.ICellLife
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 
-class Engine<T> (
+class Engine<T : ICellLife<T>> (
     private val size: Int,
     initialGrid: Grid<T>,
 ) {
@@ -15,12 +15,10 @@ class Engine<T> (
 
     var currentGrid = initialGrid
     private var generationCounter = 0
-    val nextGrid = Grid(size) { _, _ -> initialGrid.getValue(0, 0) }
+    val nextGrid = Grid(size) { x, y -> initialGrid.getValue(x, y) }
 
     // новое состояние полч
     suspend fun step(
-        rule: AutomationRule<T>,
-        aliveValue: T,
         onAudit: (String) -> Unit,
         ): Grid<T> = coroutineScope {
 
@@ -47,12 +45,14 @@ class Engine<T> (
 //                            }
 
                             try {
-                                val newState = rule.calculateNewState(currentGrid, x, y)
+                                val currentCell = currentGrid.getValue(x, y)
+                                val newState = currentCell.calculateNext(currentGrid, x, y)
                                 nextGrid.setValue(x, y, newState)
 
-                                if (newState == aliveValue) aliveCount.incrementAndGet()
+                                if (newState.isAlive)
+                                    aliveCount.incrementAndGet()
                             } catch (e: Exception) {
-                                throw IllegalStateException("Ошибка при расчете правила ${rule.name} в клетке $x:$y", e)
+                                throw IllegalStateException("Ошибка при расчете нового состояния в клетке $x:$y", e)
                             }
                         }
                     }
@@ -66,7 +66,7 @@ class Engine<T> (
 
         if (generationCounter % 10 == 0 || generationCounter == 1) {
             val report = "\nАУДИТ ПОКОЛЕНИЯ $generationCounter: " +
-                    "\nПравило [${rule.name}] выполнено за $time мс, " +
+                    "\nВыполнено за $time мс, " +
                     "\nСтатистика: живых клеток = ${aliveCount.get()}, мертвых = ${size * size - aliveCount.get()}" +
                     "\nИспользовано $numCores ядер, " +
                     "\nРазмер области: ${size}x${size}\n"

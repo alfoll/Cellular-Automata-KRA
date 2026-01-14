@@ -1,6 +1,8 @@
 package org.example.kra_rosl_9.logic
 
-class Grid<T> (
+import org.example.kra_rosl_9.cell.ICellLife
+
+class Grid<T : ICellLife<T>> (
     override val size: Int,
     private val initialValues: (Int, Int) -> T,
 ) : ReadableGrid<T> {
@@ -9,9 +11,13 @@ class Grid<T> (
     }
 
     // один массив для матрицы
-    private val cells: Array<Any?> = Array(size * size) { i ->
-        initialValues(i / size, i % size)
+    private val cells: MutableList<T> = MutableList(size * size) { index ->
+        initialValues(index / size, index % size)
     }
+
+// arrayList можно ли сразу инициализировать как T
+//    посмотреть можно ли сделать T (мб наследник от Ilife какого то - вычисл след сост + жив не жив)
+//    ячейка знает о себе все сама передавать через контекст окрестность, высчитываем состоения на след итерации
 
     private fun getIndex(x: Int, y: Int): Int {
         // % size чтобы быть внутр массива
@@ -20,9 +26,8 @@ class Grid<T> (
         return safeX * size + safeY
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun getValue(x: Int, y: Int): T =
-        cells[getIndex(x, y)] as T
+        cells[getIndex(x, y)]
 
     fun setValue(x: Int, y: Int, value: T) {
         cells[getIndex(x, y)] = value
@@ -30,6 +35,9 @@ class Grid<T> (
 
     fun copyFrom(other: Grid<T>) {
         require(other.size == this.size) { "Размеры сеток не совпадают для копирования" }
-        System.arraycopy(other.cells, 0, this.cells, 0, cells.size)
+//        System.arraycopy(other.cells, 0, this.cells, 0, cells.size)
+        for (i in 0 until cells.size) {
+            this.cells[i] = other.cells[i]
+        }
     }
 }
